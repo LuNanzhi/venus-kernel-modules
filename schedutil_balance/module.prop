@@ -1,0 +1,6 @@
+id=schedutil_balance
+name=Schedutil Balance
+version=1.0
+versionCode=1
+author=LuNanzhi
+description=Schedutil dynamic governor with balanced caps (little 1.6G / big 1.9G / prime 2.0G) and unlocked lower bounds.
