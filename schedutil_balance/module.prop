@@ -1,6 +1,6 @@
 id=schedutil_balance
 name=Schedutil Balance
-version=1.5
-versionCode=7
+version=1.6
+versionCode=8
 author=LuNanzhi
-description=Schedutil dynamic governor. WebUI two modes + optional experimental switch to stop vendor perf services (perfd/perfservice/poweropt).
+description=Schedutil dynamic governor. WebUI: two modes + optional stop vendor perf services + optional core lock (keep all cores online).
