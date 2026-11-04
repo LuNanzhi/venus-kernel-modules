@@ -4,7 +4,7 @@ LOG=/data/local/tmp/schedutil_balance.log
 MODE_FILE=/data/local/tmp/schedutil_mode
 MODDIR=${0%/*}
 # game space / game center packages (auto-unlock while running)
-GAME_PKGS="com.miui.gamebooster com.xiaomi.gamecenter com.miui.gamebooster.service"
+GAME_PKGS="com.miui.securityadd com.miui.gamebooster com.xiaomi.gamecenter"
 
 log() { echo "[$(date +%H:%M:%S)] $*" >> "$LOG"; }
 : > "$LOG"
