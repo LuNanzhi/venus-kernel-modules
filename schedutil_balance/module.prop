@@ -1,6 +1,6 @@
 id=schedutil_balance
 name=Schedutil Balance
-version=1.2
-versionCode=3
+version=1.2.1
+versionCode=4
 author=LuNanzhi
 description=Schedutil dynamic governor. WebUI two modes: 1=limited (1.6G/1.9G/2.0G), 2=unlimited (full speed). Auto-unlock while Xiaomi game space is running.
