@@ -1,12 +1,12 @@
 #!/system/bin/sh
-# schedutil_balance v1.3: WebUI two-mode switch + guard loop (no game detection)
+# schedutil_balance v1.4: WebUI two modes + msm_performance driver lock + guard
 LOG=/data/local/tmp/schedutil_balance.log
 MODE_FILE=/data/local/tmp/schedutil_mode
 MODDIR=${0%/*}
 
 log() { echo "[$(date +%H:%M:%S)] $*" >> "$LOG"; }
 : > "$LOG"
-log "=== v1.3 start ==="
+log "=== v1.4 start ==="
 
 i=0
 while [ "$(getprop sys.boot_completed)" != "1" ] && [ $i -lt 150 ]; do
@@ -20,6 +20,8 @@ log "boot completed (waited ${i}x2s)"
 CAP_LITTLE=1600000
 CAP_BIG=1900000
 CAP_PRIME=2000000
+MP_BALANCE="0:$CAP_LITTLE 1:$CAP_LITTLE 2:$CAP_LITTLE 3:$CAP_LITTLE 4:$CAP_BIG 5:$CAP_BIG 6:$CAP_BIG 7:$CAP_PRIME"
+MP_NORMAL="0:0 1:0 2:0 3:0 4:0 5:0 6:0 7:0"
 
 last_eff=""
 while true; do
@@ -32,13 +34,15 @@ while true; do
     last_eff="$mode"
   fi
 
-  # guard: restore caps if the vendor perf stack resets max_freq
+  # guard: verify driver param and cpufreq caps, restore if vendor reset them
   if [ "$mode" = "balance" ]; then
-    _c0=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 2>/dev/null)
-    _c4=$(cat /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq 2>/dev/null)
-    _c7=$(cat /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq 2>/dev/null)
-    if [ "$_c0" -gt "$CAP_LITTLE" ] 2>/dev/null || [ "$_c4" -gt "$CAP_BIG" ] 2>/dev/null || [ "$_c7" -gt "$CAP_PRIME" ] 2>/dev/null; then
-      log "guard: restored (cpu0=$_c0 cpu4=$_c4 cpu7=$_c7)"
+    mp=$(cat /sys/module/msm_performance/parameters/cpu_max_freq 2>/dev/null | tr -d ' \n')
+    want=$(echo "$MP_BALANCE" | tr -d ' \n')
+    c0=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq 2>/dev/null)
+    c4=$(cat /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq 2>/dev/null)
+    c7=$(cat /sys/devices/system/cpu/cpu7/cpufreq/scaling_max_freq 2>/dev/null)
+    if [ "$mp" != "$want" ] || [ "$c0" -gt "$CAP_LITTLE" ] 2>/dev/null || [ "$c4" -gt "$CAP_BIG" ] 2>/dev/null || [ "$c7" -gt "$CAP_PRIME" ] 2>/dev/null; then
+      log "guard: restore (mp=${mp:0:24} cpu0=$c0 cpu4=$c4 cpu7=$c7)"
       sh "$MODDIR/apply.sh" balance
     fi
   fi
