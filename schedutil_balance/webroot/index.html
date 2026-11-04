@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedutil Balance</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px; font-family:-apple-system,"Segoe UI",Roboto,sans-serif; background:#121212; color:#e8e8e8; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .sub { font-size:12px; color:#999; margin-bottom:16px; }
+  .current { background:#1f2d1f; border:1px solid #3c3; border-radius:10px; padding:10px 12px; font-size:13px; margin-bottom:16px; color:#9d9; }
+  .card { background:#1e1e1e; border:2px solid #2e2e2e; border-radius:12px; padding:14px; margin-bottom:12px; cursor:pointer; transition:border-color .15s, background .15s; }
+  .card:active { background:#252525; }
+  .card.active { border-color:#4caf50; background:#1a241a; }
+  .card h2 { font-size:15px; margin:0 0 6px; display:flex; align-items:center; gap:8px; }
+  .badge { font-size:11px; padding:2px 8px; border-radius:999px; background:#333; color:#aaa; font-weight:normal; }
+  .card.active .badge { background:#2e7d32; color:#fff; }
+  .card p { font-size:12.5px; color:#9a9a9a; margin:0; line-height:1.6; }
+  .hint { font-size:11px; color:#666; text-align:center; margin-top:16px; line-height:1.6; }
+  #msg { font-size:12px; color:#fa0; min-height:16px; margin:8px 2px; }
+</style>
+</head>
+<body>
+  <h1>⚡ Schedutil Balance</h1>
+  <div class="sub">schedutil 动态调频 · 两档切换</div>
+  <div class="current" id="current">当前：读取中…</div>
+
+  <div class="card" id="card-balance" onclick="setMode('balance')">
+    <h2>档 1 · 限制 <span class="badge">省电优先</span></h2>
+    <p>schedutil 动态调频，频率上限：小核 1.6GHz / 大核 1.9GHz / 超大核 2.0GHz。日常待机与轻载更省电，游戏性能略降。</p>
+  </div>
+
+  <div class="card" id="card-normal" onclick="setMode('normal')">
+    <h2>档 2 · 不设限 <span class="badge">性能优先</span></h2>
+    <p>schedutil 动态调频，不限制上限（最高 2.84GHz）。游戏与重载场景满性能，功耗略高。</p>
+  </div>
+
+  <div id="msg"></div>
+  <div class="hint">游戏空间 / 游戏助手运行时会自动临时切到「不设限」档</div>
+
+<script>
+const MODDIR = "/data/adb/modules/schedutil_balance";
+const MODE_FILE = "/data/local/tmp/schedutil_mode";
+
+async function run(cmd) {
+  if (typeof ksu === "undefined" || !ksu.exec) return "";
+  try {
+    const r = await ksu.exec(cmd);
+    if (typeof r === "string") return r;
+    if (r && typeof r === "object") return r.stdout || "";
+  } catch (e) {}
+  return "";
+}
+
+function setMsg(t) { document.getElementById("msg").textContent = t; }
+
+async function refresh() {
+  const out = (await run("cat " + MODE_FILE + " 2>/dev/null || echo balance")).trim();
+  const mode = out.includes("normal") ? "normal" : "balance";
+  document.getElementById("current").textContent =
+    "当前档位：" + (mode === "balance" ? "档 1 · 限制（省电优先）" : "档 2 · 不设限（性能优先）");
+  for (const m of ["balance", "normal"]) {
+    document.getElementById("card-" + m).classList.toggle("active", m === mode);
+  }
+}
+
+async function setMode(mode) {
+  setMsg("切换中…");
+  await run("echo " + mode + " > " + MODE_FILE);
+  await run("sh " + MODDIR + "/apply.sh " + mode);
+  if (typeof ksu !== "undefined" && ksu.toast) ksu.toast("已切换到 " + (mode === "balance" ? "限制档" : "不设限档"));
+  setMsg("完成");
+  await refresh();
+  setTimeout(() => setMsg(""), 2000);
+}
+
+refresh();
+</script>
+</body>
+</html>
