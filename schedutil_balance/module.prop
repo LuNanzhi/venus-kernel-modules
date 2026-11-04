@@ -1,6 +1,6 @@
 id=schedutil_balance
 name=Schedutil Balance
-version=1.4
-versionCode=6
+version=1.5
+versionCode=7
 author=LuNanzhi
-description=Schedutil dynamic governor. WebUI two-mode switch with msm_performance driver-level lock: mode1 caps (1.6G/1.9G/2.0G), mode2 unlocks (full speed).
+description=Schedutil dynamic governor. WebUI two modes + optional experimental switch to stop vendor perf services (perfd/perfservice/poweropt).
