@@ -47,16 +47,25 @@
       <h2>停厂商性能服务 <span class="badge">实验</span></h2>
       <div class="sw" id="sw-stop"></div>
     </div>
-    <p>停止 perfd / perfservice / poweropt-service（阻止厂商重置频率上限）。可能导致性能调度异常，关闭开关或重启即可恢复。</p>
+    <p>停止 perfd / perfservice / poweropt-service（阻止厂商重置频率上限）。可能导致性能调度异常，关掉开关或重启恢复。</p>
+  </div>
+
+  <div class="card" id="card-lock" onclick="toggleLock()">
+    <div class="switch">
+      <h2>锁定全核在线 <span class="badge">性能</span></h2>
+      <div class="sw" id="sw-lock"></div>
+    </div>
+    <p>把 core_ctl 的最小在线核心数设为最大（小核 4 / 大核 3 / 超大核 1），防止停服务后核心被下线（4 核禁用）。</p>
   </div>
 
   <div id="msg"></div>
-  <div class="hint">玩游戏前切「不设限」，日常用「限制」更省电<br>驱动级锁定 + 守护循环，厂商重置时自动恢复</div>
+  <div class="hint">推荐组合：停服务开 + 锁定全核开 → 性能保住、频率受限<br>玩游戏前切「不设限」</div>
 
 <script>
 const MODDIR = "/data/adb/modules/schedutil_balance";
 const MODE_FILE = "/data/local/tmp/schedutil_mode";
 const STOP_FILE = "/data/local/tmp/schedutil_stop_services";
+const LOCK_FILE = "/data/local/tmp/schedutil_lock_cores";
 
 async function run(cmd) {
   if (typeof ksu === "undefined" || !ksu.exec) return "";
@@ -67,7 +76,6 @@ async function run(cmd) {
   } catch (e) {}
   return "";
 }
-
 function setMsg(t) { document.getElementById("msg").textContent = t; }
 
 async function refresh() {
@@ -75,11 +83,11 @@ async function refresh() {
   const mode = modeOut.includes("normal") ? "normal" : "balance";
   document.getElementById("current").textContent =
     "当前档位：" + (mode === "balance" ? "档 1 · 限制（省电优先）" : "档 2 · 不设限（性能优先）");
-  for (const m of ["balance", "normal"]) {
-    document.getElementById("card-" + m).classList.toggle("active", m === mode);
-  }
+  for (const m of ["balance", "normal"]) document.getElementById("card-" + m).classList.toggle("active", m === mode);
   const stopOut = (await run("cat " + STOP_FILE + " 2>/dev/null || echo off")).trim();
   document.getElementById("sw-stop").classList.toggle("on", stopOut.includes("on"));
+  const lockOut = (await run("cat " + LOCK_FILE + " 2>/dev/null || echo on")).trim();
+  document.getElementById("sw-lock").classList.toggle("on", lockOut.includes("on"));
 }
 
 async function setMode(mode) {
@@ -87,9 +95,7 @@ async function setMode(mode) {
   await run("echo " + mode + " > " + MODE_FILE);
   await run("sh " + MODDIR + "/apply.sh " + mode);
   if (typeof ksu !== "undefined" && ksu.toast) ksu.toast("已切换到 " + (mode === "balance" ? "限制档" : "不设限档"));
-  setMsg("完成");
-  await refresh();
-  setTimeout(() => setMsg(""), 2000);
+  setMsg("完成"); await refresh(); setTimeout(() => setMsg(""), 2000);
 }
 
 async function toggleStop() {
@@ -98,13 +104,24 @@ async function toggleStop() {
   setMsg(next === "on" ? "正在停服务…" : "已恢复服务…");
   await run("echo " + next + " > " + STOP_FILE);
   if (next === "on") {
-    // immediate kill
     await run("for s in 'vendor.qti.hardware.perf@2.2-service' perfservice poweropt-service; do for p in $(pidof $s); do kill -9 $p 2>/dev/null; done; done");
     if (typeof ksu !== "undefined" && ksu.toast) ksu.toast("已停厂商服务（实验）");
   } else {
-    if (typeof ksu !== "undefined" && ksu.toast) ksu.toast("已恢复厂商服务（重启后完全恢复）");
+    if (typeof ksu !== "undefined" && ksu.toast) ksu.toast("已恢复（重启后完全恢复）");
   }
-  setMsg("");
+  setMsg(""); await refresh();
+}
+
+async function toggleLock() {
+  const cur = (await run("cat " + LOCK_FILE + " 2>/dev/null || echo on")).trim();
+  const next = cur.includes("on") ? "off" : "on";
+  await run("echo " + next + " > " + LOCK_FILE);
+  if (next === "on") {
+    await run("for c in 0 4 7; do d=/sys/devices/system/cpu/cpu$c/core_ctl; m=$(cat $d/max_cpus 2>/dev/null); [ -n \"$m\" ] && echo $m > $d/min_cpus 2>/dev/null; done");
+    if (typeof ksu !== "undefined" && ksu.toast) ksu.toast("已锁定全核");
+  } else {
+    if (typeof ksu !== "undefined" && ksu.toast) ksu.toast("已解除核心锁定");
+  }
   await refresh();
 }
 
