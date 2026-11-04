@@ -20,6 +20,11 @@
   .card p { font-size:12.5px; color:#9a9a9a; margin:0; line-height:1.6; }
   .hint { font-size:11px; color:#666; text-align:center; margin-top:16px; line-height:1.6; }
   #msg { font-size:12px; color:#fa0; min-height:16px; margin:8px 2px; }
+  .switch { display:flex; align-items:center; justify-content:space-between; }
+  .sw { width:48px; height:26px; border-radius:13px; background:#333; position:relative; transition:background .2s; flex:0 0 auto; }
+  .sw.on { background:#2e7d32; }
+  .sw::after { content:""; position:absolute; width:20px; height:20px; border-radius:50%; background:#fff; top:3px; left:3px; transition:left .2s; }
+  .sw.on::after { left:25px; }
 </style>
 </head>
 <body>
@@ -37,12 +42,21 @@
     <p>schedutil 动态调频，解除驱动级锁定（最高 2.84GHz）。游戏与重载场景满性能，功耗略高。</p>
   </div>
 
+  <div class="card" id="card-stop" onclick="toggleStop()">
+    <div class="switch">
+      <h2>停厂商性能服务 <span class="badge">实验</span></h2>
+      <div class="sw" id="sw-stop"></div>
+    </div>
+    <p>停止 perfd / perfservice / poweropt-service（阻止厂商重置频率上限）。可能导致性能调度异常，关闭开关或重启即可恢复。</p>
+  </div>
+
   <div id="msg"></div>
   <div class="hint">玩游戏前切「不设限」，日常用「限制」更省电<br>驱动级锁定 + 守护循环，厂商重置时自动恢复</div>
 
 <script>
 const MODDIR = "/data/adb/modules/schedutil_balance";
 const MODE_FILE = "/data/local/tmp/schedutil_mode";
+const STOP_FILE = "/data/local/tmp/schedutil_stop_services";
 
 async function run(cmd) {
   if (typeof ksu === "undefined" || !ksu.exec) return "";
@@ -57,13 +71,15 @@ async function run(cmd) {
 function setMsg(t) { document.getElementById("msg").textContent = t; }
 
 async function refresh() {
-  const out = (await run("cat " + MODE_FILE + " 2>/dev/null || echo balance")).trim();
-  const mode = out.includes("normal") ? "normal" : "balance";
+  const modeOut = (await run("cat " + MODE_FILE + " 2>/dev/null || echo balance")).trim();
+  const mode = modeOut.includes("normal") ? "normal" : "balance";
   document.getElementById("current").textContent =
     "当前档位：" + (mode === "balance" ? "档 1 · 限制（省电优先）" : "档 2 · 不设限（性能优先）");
   for (const m of ["balance", "normal"]) {
     document.getElementById("card-" + m).classList.toggle("active", m === mode);
   }
+  const stopOut = (await run("cat " + STOP_FILE + " 2>/dev/null || echo off")).trim();
+  document.getElementById("sw-stop").classList.toggle("on", stopOut.includes("on"));
 }
 
 async function setMode(mode) {
@@ -74,6 +90,22 @@ async function setMode(mode) {
   setMsg("完成");
   await refresh();
   setTimeout(() => setMsg(""), 2000);
+}
+
+async function toggleStop() {
+  const cur = (await run("cat " + STOP_FILE + " 2>/dev/null || echo off")).trim();
+  const next = cur.includes("on") ? "off" : "on";
+  setMsg(next === "on" ? "正在停服务…" : "已恢复服务…");
+  await run("echo " + next + " > " + STOP_FILE);
+  if (next === "on") {
+    // immediate kill
+    await run("for s in 'vendor.qti.hardware.perf@2.2-service' perfservice poweropt-service; do for p in $(pidof $s); do kill -9 $p 2>/dev/null; done; done");
+    if (typeof ksu !== "undefined" && ksu.toast) ksu.toast("已停厂商服务（实验）");
+  } else {
+    if (typeof ksu !== "undefined" && ksu.toast) ksu.toast("已恢复厂商服务（重启后完全恢复）");
+  }
+  setMsg("");
+  await refresh();
 }
 
 refresh();
