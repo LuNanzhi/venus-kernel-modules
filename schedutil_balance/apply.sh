@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# apply.sh <balance|normal> - apply driver-level lock + cpufreq caps
+# apply.sh <balance|normal> - driver lock + cpufreq caps
 MODE="$1"
 case "$MODE" in balance|normal) ;; *) MODE=balance ;; esac
 
@@ -7,7 +7,6 @@ CAP_LITTLE=1600000
 CAP_BIG=1900000
 CAP_PRIME=2000000
 
-# driver-level msm_performance limits (0 = unlimited)
 if [ "$MODE" = "balance" ]; then
   MP_MAX="0:$CAP_LITTLE 1:$CAP_LITTLE 2:$CAP_LITTLE 3:$CAP_LITTLE 4:$CAP_BIG 5:$CAP_BIG 6:$CAP_BIG 7:$CAP_PRIME"
 else
