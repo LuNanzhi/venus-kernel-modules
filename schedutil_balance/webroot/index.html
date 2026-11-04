@@ -29,16 +29,16 @@
 
   <div class="card" id="card-balance" onclick="setMode('balance')">
     <h2>档 1 · 限制 <span class="badge">省电优先</span></h2>
-    <p>schedutil 动态调频，频率上限：小核 1.6GHz / 大核 1.9GHz / 超大核 2.0GHz。日常待机与轻载更省电，游戏性能略降。</p>
+    <p>schedutil 动态调频，驱动级锁定频率上限：小核 1.6GHz / 大核 1.9GHz / 超大核 2.0GHz。日常待机与轻载更省电。</p>
   </div>
 
   <div class="card" id="card-normal" onclick="setMode('normal')">
     <h2>档 2 · 不设限 <span class="badge">性能优先</span></h2>
-    <p>schedutil 动态调频，不限制上限（最高 2.84GHz）。游戏与重载场景满性能，功耗略高。</p>
+    <p>schedutil 动态调频，解除驱动级锁定（最高 2.84GHz）。游戏与重载场景满性能，功耗略高。</p>
   </div>
 
   <div id="msg"></div>
-  <div class="hint">玩游戏前可手动切到「不设限」档，日常用「限制」档更省电<br>守护循环每 10 秒校验，厂商重置频率上限时自动恢复</div>
+  <div class="hint">玩游戏前切「不设限」，日常用「限制」更省电<br>驱动级锁定 + 守护循环，厂商重置时自动恢复</div>
 
 <script>
 const MODDIR = "/data/adb/modules/schedutil_balance";
